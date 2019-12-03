@@ -1,20 +1,35 @@
-<!-- selection-horaire.liquid -->
+<!-- static-map-creneau.liquid -->
 <!-- selection -->
 <div id="selection_horaire" >
-    <section  class="map-localisation-wbu container" v-if="show_selection" >
+    <section  class="map-localisation-wbu container" v-show="show_selection" >
       <div class="row">
         <strong class="text-alert-danger element-visible" style="display:none;"> Afin d'afficher correctement les créneaux, merci de cliquer sur la date concernée </strong>
         <div class="col-sm-8">
             <div >
-                <selection_horaire :id_html="'id_date_recuperation'"
-                :type="'recuperation'"
-                @ev_reload_livraison__date="reload_livraison__date"
-                @ev_reload_livraison__creneau="reload_livraison__creneau"
+                <selection_horaire
+                    :id_html="'id_date_recuperation'"
+                    :type="'recuperation'"
+                    :delai_traitement_en_jour="delai_traitement_en_jour"
+                    :re_construction_module="re_construction_module"
+                    :plage_mn="plage_mn"
+                    :default__date_select="date_recuperation"
+                    :default__creneau="creneau_recuperation"
+                    @ev_reload_livraison__date="reload_livraison__date"
+                    @ev_reload_livraison__creneau="reload_livraison__creneau"
+                    @ev_date_to_save="date_to_save"
+                    @ev_date_et_creneau_to_save="date_et_creneau_to_save"
                 ></selection_horaire>
-                <selection_horaire :id_html="'id_date_livraison'"
-                :type="'livraison'"
-                :default__date_select="date_recuperation"
-                :default__creneau="creneau_recuperation"
+                <selection_horaire
+                    :id_html="'id_date_livraison'"
+                    :type="'livraison'"
+                    :default__date_select="date_livraison"
+                    :default__creneau="creneau_livraison"
+                    :titre="'Sélectionner les horaires de livraison'"
+                    :delai_traitement_en_jour="delai_traitement_en_jour"
+                    :re_construction_module="re_construction_module"
+                    :plage_mn="plage_mn"
+                    @ev_date_to_save="date_to_save"
+                    @ev_date_et_creneau_to_save="date_et_creneau_to_save"
                 ></selection_horaire>
             </div>
         </div>
@@ -23,7 +38,7 @@
 		<type_livraison @ev_change_type_livraison="change_type_livraison" :default_type="default_type"></type_livraison>
         </div>
         <div class="col-sm-8 element-visible" style="display:none;" >
-            <button @click="procced_checkout" href="#" class="button-primary cart-checkout-custom" :class="[ (valid_creneau > 0 && valid_date > 0 )? '':'disabled']">Continuer <svg aria-hidden="true" focusable="false" role="presentation" xmlns="http://www.w3.org/2000/svg" width="11" height="10" viewBox="0 0 8 6" style="transform: rotate(-90deg);">
+            <button @click="procced_checkout" class="button-primary cart-checkout-custom" :class="[ (valid_creneau > 0 )? '':'disabled']">Continuer <svg aria-hidden="true" focusable="false" role="presentation" xmlns="http://www.w3.org/2000/svg" width="11" height="10" viewBox="0 0 8 6" style="transform: rotate(-90deg);">
               <g fill="currentColor" fill-rule="evenodd">
                 <polygon class="icon-chevron-down-left" points="4 5.371 7.668 1.606 6.665 .629 4 3.365"></polygon>
                 <polygon class="icon-chevron-down-right" points="4 3.365 1.335 .629 1.335 .629 .332 1.606 4 5.371"></polygon>
@@ -110,31 +125,41 @@ if(window.location.host == 'modulejs.kksa'){
 
 <!-- -->
 <template id="template-types-de-livraison">
-<div class="block-left">
-    <div>
-        <h3 class="title" v-html="titre"></h3>
-    </div>
-    <ul class="type-livraison">
-        <li v-for="(type, index) in types_livraison"
-            @click="select_type_tab($event, index)"
-            :class="[(type.active)? 'active':'', (type.type)?type.type:'']">
-            <h4 class="title">
-                ${type.titre} <small v-html="display_prise(type.montant)"></small>
-            </h4> <span class="d-block" v-for="(body_text, key) in type.body"
-            v-html="body_text"></span>
-        </li>
-    </ul>
-    <div v-if="show_adresse">
-        <h3 class="title">Adresse</h3>
+    <div class="block-left">
         <div>
-            <strong v-html="adresse_name"></strong>
+            <h3 class="title" v-html="titre"></h3>
+        </div>
+        <ul class="type-livraison">
+            <li v-for="(type, index) in types_livraison"
+                @click="select_type_tab($event, index)"
+                :class="[(type.active)? 'active':'', (type.type)?type.type:'']">
+                <h4 class="title">
+                    ${type.titre} <small v-html="display_prise(type.montant)"></small>
+                </h4> <span class="d-block" v-for="(body_text, key) in type.body"
+                v-html="body_text"></span>
+            </li>
+        </ul>
+        <div v-if="show_adresse">
+            <h3 class="title">Adresse</h3>
+            <div>
+                <strong v-html="adresse_name"></strong>
+            </div>
         </div>
     </div>
-</div>
 </template>
 
 
 
 
+{% schema %}
+  {
+    "name": "Section name",
+    "settings": []
+  }
+{% endschema %}
 
+{% stylesheet %}
+{% endstylesheet %}
 
+{% javascript %}
+{% endjavascript %}

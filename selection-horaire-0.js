@@ -1029,7 +1029,7 @@
                     this.data_tosave_recuperation = null;
                     this.proccedpayement_livraison = false;
 					/**
-					 * change crenneau parent
+					 * Change creneau parent
 					 */
 					this.custom_plage_mn =  datas.creneau;
 				},
