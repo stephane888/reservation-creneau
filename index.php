@@ -18,7 +18,7 @@ $fullRoot = FULLROOT_WBU;
 
 
     <title>Localisation</title>
-    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400" rel="stylesheet">
+
 
     <!-- jquery.modal.min.css -->
     <!-- Custom styles for this template -->
@@ -60,7 +60,7 @@ $fullRoot = FULLROOT_WBU;
     </div>
 
 
-    <!-- include template -->
+    <!-- include template selection-horaire-valid.js -->
     <?php include_once $fullRoot.'/api/templates/vuejs-template.html.twig'; ?>
     <script src="<?php echo $ROOT.'/'; ?>selection_creneau/selection-horaire.js?n=<?php echo time();?>"></script>
     <script src="<?php echo $ROOT.'/'; ?>api/plugin/js-cookie/js.cookie.min.js"></script>

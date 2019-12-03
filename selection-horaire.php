@@ -13,7 +13,7 @@
                     :re_construction_module="re_construction_module"
                     :plage_mn="plage_mn"
                     :default__date_select="date_recuperation"
-                    :default__creneau="creneau_recuperation"
+                    :default__creneau="default_creneau_recuperation"
                     @ev_reload_livraison__date="reload_livraison__date"
                     @ev_reload_livraison__creneau="reload_livraison__creneau"
                     @ev_date_to_save="date_to_save"
@@ -23,7 +23,8 @@
                     :id_html="'id_date_livraison'"
                     :type="'livraison'"
                     :default__date_select="date_livraison"
-                    :default__creneau="creneau_livraison"
+                    :default__creneau="default_creneau_livraison"
+                    :creneau_update="creneau_update_livraison"
                     :titre="'Sélectionner les horaires de livraison'"
                     :delai_traitement_en_jour="delai_traitement_en_jour"
                     :re_construction_module="re_construction_module"
@@ -56,13 +57,14 @@
     </section>
 </div>
 <script>
-if(window.location.host == 'modulejs.kksa'){
-    window.wbu_date_now = new Date('2019-12-01T03:00'); ////'{{"now" | date: "%Y-%m-%dT%H:%M"}}';
-    window.selection_plage_heure = '{"selection_plage_heure":{"livraison":{"24":{"date":"10/12/2019","ht_debut":7,"mn_debut":30},"25":{"date":"10/12/2019","ht_debut":8,"mn_debut":0},"26":{"date":"28/11/2019","ht_debut":7,"mn_debut":30},"27":{"date":"30/11/2019","ht_debut":8,"mn_debut":0},"28":{"date":"30/11/2019","ht_debut":14,"mn_debut":0},"29":{"date":"2/12/2019","ht_debut":18,"mn_debut":0},"30":{"date":"2/12/2019","ht_debut":18,"mn_debut":30}},"recuperation":{"21":{"date":"9/12/2019","ht_debut":7,"mn_debut":30},"22":{"date":"9/12/2019","ht_debut":8,"mn_debut":0},"26":{"date":"28/11/2019","ht_debut":18,"mn_debut":0},"28":{"date":"28/11/2019","ht_debut":17,"mn_debut":0}}}}';////'{{ wbu_metafield.wbu | json }}';
-}else{
-    window.wbu_date_now = '{{"now" | date: "%Y-%m-%dT%H:%M"}}';
-}
-
+    if(window.location.host == 'modulejs.kksa'){
+        //window.wbu_date_now = new Date('2019-12-01T03:00'); ////'{{"now" | date: "%Y-%m-%dT%H:%M"}}';
+        //window.wbu_date_now = new Date('2019-12-01T07:00');
+        window.wbu_date_now = new Date();
+        window.selection_plage_heure = '{"selection_plage_heure":{"livraison":{"24":{"date":"10/12/2019","ht_debut":7,"mn_debut":30},"25":{"date":"10/12/2019","ht_debut":8,"mn_debut":0},"26":{"date":"28/11/2019","ht_debut":7,"mn_debut":30},"27":{"date":"30/11/2019","ht_debut":8,"mn_debut":0},"28":{"date":"30/11/2019","ht_debut":14,"mn_debut":0},"29":{"date":"2/12/2019","ht_debut":18,"mn_debut":0},"30":{"date":"2/12/2019","ht_debut":18,"mn_debut":30}},"recuperation":{"21":{"date":"9/12/2019","ht_debut":7,"mn_debut":30},"22":{"date":"9/12/2019","ht_debut":8,"mn_debut":0},"26":{"date":"28/11/2019","ht_debut":18,"mn_debut":0},"28":{"date":"28/11/2019","ht_debut":17,"mn_debut":0}}}}';////'{{ wbu_metafield.wbu | json }}';
+    }else{
+        window.wbu_date_now = '{{"now" | date: "%Y-%m-%dT%H:%M"}}';
+    }
 </script>
 <!-- templates -->
 

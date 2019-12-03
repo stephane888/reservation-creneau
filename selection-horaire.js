@@ -48,13 +48,14 @@
 			delimiters: ['${', '}'],
             template: '#templatehoraireselection', 
             props: {
-                id_html:{type:String, default: '',},
-                titre:{type:[String], default: 'Sélectionner les horaires de récupération'},
-                type:{type:String, default: '',},
-                delai_traitement_en_jour:{type:[Number], default: 3},
-                plage_mn:{type:[Number], default: 120},
-                default__date_select:{type:String, default: '',},
-                default__creneau:{type:[String,Object], default: '',},
+                id_html: {type:String, default: '',},
+                titre: {type:[String], default: 'Sélectionner les horaires de récupération'},
+                type: {type:String, default: '',},
+                delai_traitement_en_jour: {type:[Number], default: 3},
+                plage_mn: {type:[Number], default: 120},
+                default__date_select: {type:String, default: '',},
+                default__creneau: {type:[String,Object], default: '',},//pour definir une valeur par defaut pour le creneau lors de conscrution complete.
+                creneau_update: {type:[String,Object], default: '',}, // pour mettre a jour le creneau de livraison, apres la selection sur selui de la recuperation.
                 /**
                  * Permet de reconstruire tous les options, apres MAJ du type de livraison.
                  */
@@ -80,7 +81,7 @@
                     /**
                      * nombre de jour sur la tab.
                      */
-                    number_day: 5,
+                    number_day: 2,
                     /**
                      * Utiliser par livraison, pour determiner le nombre de jour supplementaire qui seront masqués.
                      */
@@ -101,7 +102,7 @@
                     /**
                      * 
                      */
-                    default__creneau_livraison: '',
+                    update__creneau_livraison: '',
                     /**
                      * Boolean
                      */
@@ -154,9 +155,12 @@
                         return this.default__date_select;
                     }                    
                 },
+                /**
+                 * Pour suivre la MISE à jour des creanaux lors des clics.
+                 */
                 perfom__creneau: {                    
-                    get: function () {                      
-                        return this.default__creneau;
+                    get: function () {                
+                        return this.creneau_update;
                     }
                 }
                 /* */
@@ -179,51 +183,79 @@
                 /**
                  * MAJ des creneaux de livraison à partir d'une selection de date sur la selection de recuperation.
                  */
-                update_date_livraiosn: function(){                 
+                update_date_livraiosn: function(){  
+                    var self = this;               
                     if( this.type == 'livraison' ){
-                        var date_from_recuperation = new Date(this.perfom__date_select);
-                        this.date_select = this.addDays( date_from_recuperation, (  /* not use here : this.date_debut_default + */ this.delai_traitement_en_jour) );
-                        this.date_select.setHours(this.current_date.getHours());
-                        this.date_select.setMinutes(this.current_date.getMinutes());
-                        this.date_select.setSeconds(this.current_date.getSeconds());
                         /**
-                         * MAJ de la date.
+                         * Pour eviter les chauvements on ajouter un waiter
                          */
-                        this.send__date_select();
-                        this.diff_day = this.get_diff_day(this.current_date, this.date_select );
-                        this.builder_update();
-                        /**
-                         * on remet les creneaux à l'initiale
-                         */
-                        this.default__creneau_livraison ='';
+                        function waiter(){ 
+                            if(!self.update_builder_is_running && !self.builder_is_running){
+                                var date_from_recuperation = new Date(self.perfom__date_select);
+                                self.date_select = self.addDays( date_from_recuperation, (  /* not use here : this.date_debut_default + */ self.delai_traitement_en_jour) );
+                                self.date_select.setHours(self.current_date.getHours());
+                                self.date_select.setMinutes(self.current_date.getMinutes());
+                                self.date_select.setSeconds(self.current_date.getSeconds());
+                                /**
+                                 * MAJ de la date.
+                                 */
+                                self.send__date_select();
+                                self.diff_day = self.get_diff_day(self.current_date, self.date_select );
+                                self.builder_update();
+                                /**
+                                 * on remet les creneaux à l'initiale
+                                 */
+                                self.update__creneau_livraison ='';
+                            }else{
+                                setTimeout(function(){
+                                    console.log('builder_update is waiting');
+                                    waiter();
+                                },300);
+                            }                            
+                        } 
+                        waiter();                       
                     }
                 },
-                update_creneau_livraiosn: function(){
+                update_creneau_livraiosn: async function(){
                     /**
                      * Est executé au chargement car le builder appelle la fonction send__date_select() 
                      */
-                    if(this.type == 'livraison' ){                        
-                        this.build_creneaux();
+                    if(this.type == 'livraison' ){                       
+                        await this.build_creneaux();
+                        /**
+                         * Permet de selectionner le premier creneau lors de la selection manuel au niveau de la recuperation.
+                         */
+                        await this.select_plage_heure();
                     }
                 },
                 /**
                  * Permet de reconstruire entirement le module de selection.
                  * Executer par une action externe au module de selection, notament lors de la selection du type de livraison.
                  */
-                re_builder: function(){
+                re_builder: function(){console.log(this.builder_is_running);
+                    var self = this;
                     /**
                      * on remet les creneaux à l'initiale
                      */
-                    this.default__creneau_livraison ='';
+                    this.update__creneau_livraison ='';
                     /**
-                     * reconstruction du module
+                     * { Pour la version suivante, il faudra que lorsqu'on désactive this.builder();  que le resultat soit vide, actuelement les creneau s'affiche. D'ou l'ajout d"un waiter }
+                     * Reconstruction du module
                      */
-                    if(!this.update_builder_is_running){
-                        this.horaires=[]; 
-                        this.dates_tabs=[];
-                        this.months=[];
-                        this.builder();
+                    function waiter(){
+                       if(!self.builder_is_running && !self.update_builder_is_running){
+                            self.horaires=[]; 
+                            self.dates_tabs=[];
+                            self.months=[];
+                            self.builder();
+                        }else{
+                            setTimeout(function(){
+                                console.log(' Re_builder is waiting ');
+                                waiter();
+                            },300);
+                        } 
                     }
+                    waiter();                    
                 },
                 /**
                  * Permet de reconstruire partiellement le module de selection.
@@ -271,92 +303,60 @@
                  builder: async function(){
                     var self = this;
                     this.builder_is_running=true;
-                    var etape1 = await self.get_select_date();
-                    console.log('%c  Builder fin de etape : %s', 'background: #232323; color: #01bd29; padding: 5px;', etape1, ' type : ', self.type);
+                    var etape1 = await self.get_select_date(); 
+                    //console.log('%c  Builder fin de etape : %s', 'background: #ccc; color: #1a7b01;', etape1, ' type : ', self.type); 
                     var etape2 = await self.build_tabs();
-                    console.log('%c  Builder fin de etape : %s', 'background: #232323; color: #01bd29; padding: 5px;', etape2, ' type : ', self.type);
+                    //console.log('%c  Builder fin de etape : %s', 'background: #ccc; color: #1a7b01; padding: 2px;', etape2, ' type : ', self.type);
                     var etape3 = await self.build_creneaux();
-                    console.log('%c  Builder fin de etape : %s', 'background: #232323; color: #01bd29; padding: 5px;', etape3, ' type : ', self.type);
-                    console.log('Builder etape execution terminée', ' type : ', self.type);
-
-                    return false;
-                    function _execution(etape) {
-                        return new Promise((resolve, reject) => {
-                            //console.log('Builder etape : ', etape);
-                            if(etape == 0){
-                                resolve({etape:etape, resul:self.get_select_date()});
-                            }
-                            else if(etape == 1){
-                                resolve({etape:etape, resul:self.build_tabs()});
-                            }
-                            else if(etape == 2){ 
-                                resolve({etape:etape, resul:self.build_creneaux()});
-                            }
-                            else if(etape == 3){ 
-                                resolve({etape:etape, resul:self.buildCalendarMounth()});
-                            }
-                            else if(etape == 4){ 
-                                resolve({etape:etape, resul:self.send__date_select()});
-                            }
-                            else if(etape == 5){ 
-                                /**
-                                 * on selectionne le premier creneau.
-                                 */
-                                //resolve({etape:etape, resul:self.select_plage_heure(0)});
-                                resolve({etape:etape});
-                            }
-                            else{
-                                console.log('Builder etape execution terminée');
-                               reject ({etape:etape});
-                            }
-                        });
-                    }
-                    //execution(0).then(nextExecution, stopExecution).catch(function(error){console.log('Error builder catch : ', error);});
+                    //console.log('%c  Builder fin de etape : %s', 'background: #ccc; color: #1a7b01; padding: 2px;', etape3, ' type : ', self.type);
+                    var etape4 = await self.buildCalendarMounth();
+                    //console.log('%c  Builder fin de etape : %s', 'background: #ccc; color: #1a7b01; padding: 2px;', etape4, ' type : ', self.type);
+                    var etape5 = await self.send__date_select();
+                    //console.log('%c  Builder fin de etape : %s', 'background: #ccc; color: #1a7b01; padding: 2px;', etape5, ' type : ', self.type);
+                    var etape6 = await self.select_plage_heure();
+                    //console.log('%c  Builder fin de etape : %s', 'background: #ccc; color: #1a7b01; padding: 2px;', etape6, ' type : ', self.type);
                     /**
                      * 
-                     * @param {*} value 
                      */
-                    function nextExecution(value){ 
-                        execution( value.etape + 1 ).then(nextExecution, stopExecution).catch(function(error){console.log('Error builder catch : ', error);});;
-                    }
-                    /**
-                     * 
-                     * @param {*} value 
-                     */
-                    function stopExecution(value){
-                        self.builder_is_running=false;
-                        if(!value.etape)
-                        console.log('Error on builder stopExecution : ', value);
-                    }
+                    //console.log('%c Builder etape execution terminée %s', 'background: #222; color: #01bd29; padding: 5px;', ' type : ', self.type);
+                    this.builder_is_running=false;
+                    return false;                    
                 },                
                 get_select_date: function(){
-                    console.log('get_select_date debut, type ', this.type);
+                    //console.log('get_select_date debut, type ', this.type);
                     if( this.type == 'recuperation' ){
-                        if(this.builder_is_running && this.default__date_select != '' && this.valid_default_date() ){
+                        if(this.builder_is_running && this.default__date_select != '' && this.valid_default_date() > 0 ){
                             this.date_select = new Date (this.default__date_select);
                         }else{
                             this.date_select = this.addDays( this.current_date, (  this.date_debut_default) );
                         }                        
                         this.diff_day = this.get_diff_day(this.current_date, this.date_select );
-                        console.log('get_select_date FIN');
+                        //console.log('get_select_date FIN');
                         return 'get_select_date';//this.date_select;
                     }else if( this.type == 'livraison' ) {
-                        if(this.builder_is_running && this.default__date_select != ''  && this.valid_default_date() ){
+                        if(this.builder_is_running && this.default__date_select != ''  && this.valid_default_date() > 0 ){
                             this.date_select = new Date (this.default__date_select);
                         }else{
                             this.date_select = this.addDays( this.current_date, (  this.date_debut_default + this.delai_traitement_en_jour) );
                         }
                         this.diff_day = this.get_diff_day(this.current_date, this.date_select );
-                        console.log('get_select_date FIN, type ', this.type);
+                        //console.log('get_select_date FIN, type ', this.type);
                         return 'get_select_date';//this.date_select;
                     }  
                 },
                 valid_default_date: function(){
-                    return this.get_diff_day(this.current_date, this.default__date_select, false);
+                    var date_du_jour = this.current_date;
+                    date_du_jour.setHours(0);
+                    date_du_jour.setMinutes(0);
+                    date_du_jour.setSeconds(0);
+                    var diff = this.get_diff_day(date_du_jour, this.default__date_select, false);
+                    console.log('valid_default_date ', this.type, ' : ',diff)
+                    return diff;
                 },
                 send__date_select: function(){
                     //console.log('Date selectionner pour le type ', this.type,' : ', this.date_select);
                     this.$emit('ev_date_to_save', {type:this.type, date:this.date_select});
+                    return 'send__date_select';
                 },
                 addDays: function(date, days){
                     //console.log('addDays : ', days);
@@ -367,7 +367,7 @@
 					return result;
 				},
                 build_tabs: function(){
-                    console.log('build_tabs debut, type ', this.type);
+                    //console.log('build_tabs debut, type ', this.type);
                     var self = this;
                     this.dates_tabs = [];
                     var i=0;
@@ -408,7 +408,7 @@
 						'mois': 'afficher le calendrier',
 						'index':'all',
                     });
-                    console.log('build_tabs fin, type ', this.type);
+                    //console.log('build_tabs fin, type ', this.type);
                     return 'build_tabs';
                 },
                 getDayFrench: function(index){
@@ -481,12 +481,13 @@
                      * on remet les creneaux à l'initiale
                      */
                     if(this.type == 'livraison'){
-                        this.default__creneau_livraison ='';
+                        this.update__creneau_livraison ='';
                     }
                             
                 },
                 translate_date_to_valid: function(day){
                     if(day.date && day.month && day.year){
+                        if(day.date < 10){day.date = '0'+day.date;}
                         return new Date(day.year+'-'+(day.month+1)+'-'+day.date);
                     }
                     return this.date_select;
@@ -628,10 +629,10 @@
 
                                 function addCrenaux(ct_bl){ 
                                     /**
-                                     * On selectionne la valeur valeur par defaut
+                                     * On selectionne la valeur valeur par defaut ( à verfier et noter)
                                      */
-                                    if(self.builder_is_running && self.default__creneau && self.default__creneau.h1){
-                                        if( self.default__creneau.h1 == ct_bl.h1 && self.default__creneau.h2 == ct_bl.h2){
+                                    if(self.builder_is_running && self.perfom__creneau && self.perfom__creneau.h1){
+                                        if( self.perfom__creneau.h1 == ct_bl.h1 && self.perfom__creneau.h2 == ct_bl.h2){
                                             ct_bl.active = true;
                                         }
                                     }      
@@ -680,7 +681,7 @@
 						 * 
 						 */
 						async function  fin_construction (){
-                            console.log('Fin de la contruction de type ',self.type, ' : ',etape_construction, plage_all);
+                            //console.log('Fin de la contruction de type ',self.type, ' : ',etape_construction, plage_all);
                             if(etape_construction == 'matinee'){
                                 await self.perfom_build_creneaux(plage_all, 'soir');
                             }
@@ -692,14 +693,15 @@
                 },
                 creneau_parjour: function(index){
                     var plages = [
-						{matinee:{ ht_debut:8, mn_debut:00, ht_fin:12, mn_fin:30 }, soir:{ht_debut:18, mn_debut:00, ht_fin:22, mn_fin:30 }}, //dim
-						{matinee:{ ht_debut:8, mn_debut:00, ht_fin:14, mn_fin:30 }, soir:{ht_debut:13, mn_debut:00, ht_fin:21, mn_fin:30 }}, //lin
-						{matinee:{ ht_debut:8, mn_debut:00, ht_fin:14, mn_fin:30 }, soir:{ht_debut:13, mn_debut:00, ht_fin:21, mn_fin:30 }}, //mard
-						{matinee:{ ht_debut:8, mn_debut:30, ht_fin:14, mn_fin:30 }, soir:{ht_debut:13, mn_debut:00, ht_fin:22, mn_fin:00 } }, //merc
-						{matinee:{ ht_debut:8, mn_debut:00, ht_fin:14, mn_fin:30 }, soir:{ht_debut:16, mn_debut:30, ht_fin:21, mn_fin:30 }}, //jeudi
-						{matinee:{ ht_debut:8, mn_debut:00, ht_fin:14, mn_fin:30 }, soir:{ht_debut:16, mn_debut:30, ht_fin:21, mn_fin:30 }}, //vendredi
-						{matinee:{ ht_debut:8, mn_debut:00, ht_fin:14, mn_fin:30 }, soir:{ht_debut:18, mn_debut:00, ht_fin:21, mn_fin:30 }}  //samedi    			
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:12, mn_fin:30 }, soir:{ht_debut:18, mn_debut:0, ht_fin:22, mn_fin:30 }}, //dim
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:13, mn_debut:0, ht_fin:21, mn_fin:30 }}, //lin
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:13, mn_debut:0, ht_fin:21, mn_fin:30 }}, //mard
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:13, mn_debut:0, ht_fin:22, mn_fin:0 } }, //merc
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:16, mn_debut:30, ht_fin:21, mn_fin:30 }}, //jeudi
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:16, mn_debut:30, ht_fin:21, mn_fin:30 }}, //vendredi
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:18, mn_debut:0, ht_fin:21, mn_fin:30 }}  //samedi    			
                     ];
+                    var plage_valide={};
                     /**
                      * selection de la plage
                      */
@@ -743,9 +745,9 @@
                      * MAJ des creneaux en fonction de celui precedament selectionnée.
                      */
                     if(this.type == 'livraison' && !this.update_builder_is_running){
-                        console.log('%c GET new creneau %s','background: #222; color: #bada55',this.type,'  \n\n Date de recuparation : ', this.perfom__date_select , ' \n\n Date de livraison : ', this.date_select, ' \n\n Date encours ou date du jour : ',this.current_date);
+                        //console.log('%c GET new creneau %s','background: #222; color: #bada55',this.type,'  \n\n Date de recuparation : ', this.perfom__date_select , ' \n\n Date de livraison : ', this.date_select, ' \n\n Date encours ou date du jour : ',this.current_date);
                         var date_livraison = this.date_select;
-                        date_livraison.setHours(0)
+                        date_livraison.setHours(0);
                         date_livraison.setMinutes(0);
                         date_livraison.setSeconds(0);
                         /**
@@ -753,19 +755,22 @@
                          * on va deduire la date de recuperation. 
                          */
                         var date_from_recuperation=this.current_date;
+                        date_from_recuperation.setHours(0);
+                        date_from_recuperation.setMinutes(0);
+                        date_from_recuperation.setSeconds(0);
                         if(this.perfom__date_select){
                             date_from_recuperation = this.perfom__date_select;
                         }
                         
                         var diff_day = this.get_diff_day(date_livraison, date_from_recuperation);
-                        console.log('\n\n date livraiosn : ', date_livraison, ' diff : ', diff_day, 'delai_traitement_en_jour : ', this.delai_traitement_en_jour);
+                        //console.log('\n\n date livraiosn : ', date_livraison, ' diff : ', diff_day, 'delai_traitement_en_jour : ', this.delai_traitement_en_jour);
                         if( diff_day == ( this.delai_traitement_en_jour + this.date_debut_default ) ){ 
-                            this.default__creneau_livraison = this.perfom__creneau;
+                            this.update__creneau_livraison = this.perfom__creneau;
                         }else{
-                            this.default__creneau_livraison = '';
+                            this.update__creneau_livraison = '';
                         }
-                        if( this.default__creneau_livraison && this.default__creneau_livraison.h1 && this.default__creneau_livraison.h1 != '' ){
-                            var hr_new = (this.default__creneau_livraison.h1).split(":");
+                        if( this.update__creneau_livraison && this.update__creneau_livraison.h1 && this.update__creneau_livraison.h1 != '' ){
+                            var hr_new = (this.update__creneau_livraison.h1).split(":");
                             var current_date = this.date_select;
                             hr_new[0] = parseInt(hr_new[0]);
                             hr_new[1] = parseInt(hr_new[1]);                            
@@ -807,12 +812,13 @@
 						day_unavailable = day_index;
 					}
                    this.buildCalendar(-day_unavailable, false);
+                   return 'buildCalendarMounth';
                 },
-                buildCalendar: function(days, status, etape=1){
+                buildCalendar: function(days, status, etape=1){                    
                     if(etape==1){
                         this.CalendarMounth(days, status);
                     }else if(etape==2){
-                        day_unavailable = 31 + days;
+                        var day_unavailable = 31 + days;
                         this.CalendarMounth(day_unavailable, true);
                     }
                 },
@@ -899,7 +905,7 @@
                          * on remet les creneaux à l'initiale
                          */
                         if(this.type == 'livraison'){
-                            this.default__creneau_livraison ='';
+                            this.update__creneau_livraison ='';
                         }
                     } 
                 },
@@ -915,26 +921,55 @@
                         return true;
                     }
                 },
-                select_plage_heure: function(index){
+                select_plage_heure: function(index=0){
                     var self=this;
                     var horaires = [];
+                    //console.log('select_plage_heure : ', this.type , ' perfom__creneau : ', this.perfom__creneau, ' default__creneau : ', this.default__creneau);
+                    //console.log('self.builder_is_running : ', self.builder_is_running, ' self.update_builder_is_running : ', self.update_builder_is_running);
+                    var ct_bl = '';
+                    if(this.default__creneau && this.default__creneau != '' && this.builder_is_running){
+                        ct_bl = ( self.default__creneau ).split('-');
+                        ct_bl[0] = ct_bl[0].trim();
+                        ct_bl[1] = ct_bl[1].trim();
+                        index=null;
+                        //console.log(ct_bl);
+                    }
+                    else if( self.perfom__creneau  &&  self.perfom__creneau != '' && !self.perfom__creneau.h1 ){
+                        ct_bl = (self.perfom__creneau).split('-');
+                        ct_bl[0] = ct_bl[0].trim();
+                        ct_bl[1] = ct_bl[1].trim();
+                        index=null;
+                        //console.log(ct_bl);
+                    }
                     $.each(self.horaires, function(i, hour){
-						if(i == index){
+                        if( (ct_bl && ct_bl[0]) &&
+                            ( ct_bl[0] == hour.h1 && ct_bl[1] == hour.h2)
+                        ){
                             hour['active']=true;
-							horaires.push(hour);
-							self.send__creneau(hour); 
+                            horaires.push(hour);
+                            if(self.builder_is_running && self.type == 'livraison'){
+                                self.send__creneau(hour);
+                            }
+                        }
+                        else if(i == index ){
+                            hour['active']=true;
+                            horaires.push(hour);
+                            self.send__creneau(hour);                            
 						}else{
 							hour['active']=false;
 							horaires.push(hour);
 						}
 					});
-					self.horaires = horaires;
+                    self.horaires = horaires;
+                    return 'select_plage_heure';
                 },
                 send__creneau: function(creneau){
                     this.$emit('ev_date_et_creneau_to_save', {type:this.type, date:this.date_select,creneau:creneau});
-                    creneau.type = this.type;
-                    this.$emit( 'ev_reload_livraison__creneau', creneau );
-                    
+                    //if(!this.builder_is_running)
+                    {
+                        creneau.type = this.type;
+                        this.$emit( 'ev_reload_livraison__creneau', creneau );
+                    }
                 }
             },
             
@@ -1022,9 +1057,10 @@
                  * format 2019-12-5
                  */
                 date_recuperation: '', 
-                date_livraison:'',   
-                creneau_recuperation: '',
-                creneau_livraison:'',
+                default_creneau_recuperation: '',
+                date_livraison:'',
+                default_creneau_livraison:'',
+                creneau_update_livraison:'',
                 /**
                  * Plage d'un creneau.
                  */
@@ -1111,8 +1147,9 @@
                 this.loadcart();     
                 /*
                 this.date_recuperation = '2019-12-12';
+                this.date_livraison = '2019-12-19';
                 this.re_construction_module++;
-                */
+                /**/
             },
             methods: {
                 /**
@@ -1153,7 +1190,7 @@
                     }
                     if(this.valid_creneau_recuperation && this.valid_creneau_livraison){
                         this.valid_creneau = true;
-                        console.log('Date et creneau à sauvergarder : ', this.data_tosave_recuperation, this.data_tosave_livraison);
+                        console.log('\n\n Date et creneau à sauvergarder : \n', this.data_tosave_recuperation, this.data_tosave_livraison);
                     }
                     else{
                         this.valid_creneau = false;
@@ -1178,10 +1215,12 @@
                     this.re_construction_module++;
                 },
                 reload_livraison__date: function(day){
+                    //console.log('Mise à jour de la date de livraison, action déclenchée  par celui de la recuperation. : ', day);
                     this.date_livraison = day.year+'-'+(day.month + 1)+'-'+day.date;
                 },
                 reload_livraison__creneau: function(creneau){
-                    this.creneau_livraison = creneau;
+                    //console.log('Mise à jour du creneau de livraison, action déclenchée  par celui de la recuperation. : ', creneau);
+                    this.creneau_update_livraison = creneau;
                 },
                 loadcart: function(){
 					var self = this;
@@ -1223,7 +1262,7 @@
 					$('button[name="checkout"]').trigger('click');
                     this.valid_creneau=false;                    
 				},
-                procced_checkout: function(){
+                procced_checkout: async function(){
                     var self = this;
                     if(!this.valid_creneau){return false;}
                     console.log(' Go payement ');
@@ -1232,30 +1271,32 @@
 					 * On verifie le contenu des champs.
 					 */
 					if(this.data_tosave_livraison && this.data_tosave_recuperation ){
+                        this.valid_creneau = true;
 						var selection = '.map-localisation-wbu';
 						self.add_cover_wait(selection);
 						var datas = {
-								attributes:{ livraison : this.data_tosave_livraison, recuperation : this.data_tosave_recuperation }
+							attributes:{ livraison : this.data_tosave_livraison, recuperation : this.data_tosave_recuperation }
 						};
 						var wbu_localisation_map = Cookies.get('wbu_localisation_map');
 						if(wbu_localisation_map){
-							datas.attributes['localisation'] = wbu_localisation_map;
+                            datas.attributes['localisation'] = wbu_localisation_map;
+                            self.valid_localisation = true;
 						}    			
-						this.url = '/cart/update';
-						this.save_attribute_cart(datas);
-                        self.valid_creneau=true;
+						/**
+                         * open map
+                         */
                         if(!self.valid_localisation){
-                          self.open_map();  
+                            self.open_map();  
                         }
-					}
-					else if( !self.valid_localisation ){
-						self.open_map();
-					}
-					else if( self.valid_creneau && self.valid_localisation ){
-						this.apply_checkout();
-					} 		
-                },
-				analyseCart: function(){
+                        this.url = '/cart/update';
+                        var saveAttribute = await this.save_attribute_cart( datas );
+                        console.log('Procced_checkout saveAttribute : ', saveAttribute, ' localisation : ', self.valid_localisation);
+                        if( self.valid_localisation && saveAttribute ){
+                            await this.apply_checkout();
+                        }
+					} 		 
+                }, 
+				analyseCart:  function(){
 					var self=this;
                     var check_type_livraison=false;
 					/**
@@ -1282,7 +1323,7 @@
                                         }
                                         if( texte[0] && (texte[0].indexOf('Heure') !== -1) && texte[1] ){
                                             //console.log(texte[1]);
-                                            self.creneau_recuperation = texte[1]; 
+                                            self.default_creneau_recuperation = texte[1]; 
                                         }
                                     });
                                     $.each(livraison, function(i, val){
@@ -1294,19 +1335,20 @@
                                         }
                                         if( texte[0] && (texte[0].indexOf('Heure') !== -1) && texte[1] ){
                                             //console.log(texte[1]);
-                                            self.creneau_livraison = texte[1];
-                                        }
+                                            self.default_creneau_livraison = texte[1];
+                                        } 
                                     });
-                                    console.log('Date recuperation from cart : ', self.date_recuperation, '\n\n Creneau from cart : ', self.creneau_recuperation);
+                                    console.log('Date recuperation from cart : ', self.date_recuperation, '\n\n Creneau from cart : ', self.default_creneau_recuperation);
                                     console.log('livraison :', livraison);
                                     /**
                                      * Reconstruction des modules de selection.
+                                     * (on reconstruit une seule fois)
                                      */
-                                    self.re_construction_module++;
+                                    //self.re_construction_module++;
                                     /**
-                                     * 
+                                     * La validation est fait par le retour. ou pas
                                      */
-                                    self.valid_creneau = true;
+                                    //self.valid_creneau = true;
                                     resolve("getAttributes");
                                 }else{
                                     resolve("getAttributes");
@@ -1343,10 +1385,14 @@
                                                 self.datas = variant;  
                                                 /**
                                                  * reconstruction des modules de selection.
+                                                 * (on reconstruit une seule fois)
                                                  */
                                                 self.delai_traitement_en_jour = variant.delai;
                                                 self.plage_mn =  variant.creneau;
-                                                self.re_construction_module++;
+                                                //self.re_construction_module++;
+                                                /**
+                                                 * 
+                                                 */
                                                 resolve("CheckTypeLivraison");
                                                 return true;
                                             }
@@ -1380,11 +1426,21 @@
                             console.log('fin de etape : ', etape1, ' \n\n ');
                             var etape2 = await getAttributes();
                             console.log('fin de etape : ', etape2, ' \n\n ');
+                            /**
+                             * Si le type de livraison existe on reconstruit les modules.
+                             */
+                            if(check_type_livraison){
+                                self.re_construction_module++;
+                            }
+                            var etape3 = await addDefultTypeLivraison();
+                            console.log('fin de etape : ', etape3, ' \n\n ');
+                            var etape4 = await checkAdress();
+                            console.log('fin de etape : ', etape4, ' \n\n ');
                         }
                         execution();
 					}
 				},                
-                open_map: function(){
+                open_map: function(){console.log('MAP open');
                         var self=this;
 						$('#trigger-simple-map2'+self.model_ref).trigger( 'click' );  
                 },
@@ -1428,23 +1484,27 @@
 					});    		
 				},
 				save_attribute_cart: function(datas, apply_callback=true){
-					var self = this;
-					this.ajax_watch_attribute = 1;    		
-					jQuery.post(this.url, datas)
-					.done(function( data ) {
-						/**
-						 * return html
-						 */
-						console.log(" MAJ des attributs : ", datas);
-						var selection = '.map-localisation-wbu';
-                        self.remove_cover_wait(selection);
-                        if(apply_callback){
-                            self.ajax_watch_attribute=2; 
-                        }						 	    	
-					}).fail(function() {
-						//alert( "error" );
-						self.ajax_watch_attribute=3;
-					})
+                    var self = this;
+                    return new Promise(resolve => {
+                        self.ajax_watch_attribute = 1;    		
+                        jQuery.post(self.url, datas)
+                        .done(function( data ) {
+                            /**
+                             * return html
+                             */
+                            console.log(" MAJ des attributs : ", datas);
+                            var selection = '.map-localisation-wbu';
+                            self.remove_cover_wait(selection);
+                            if(apply_callback){
+                                self.ajax_watch_attribute = 2; 
+                            }		
+                            resolve(true);				 	    	
+                        }).fail(function() {
+                            //alert( "error" );
+                            self.ajax_watch_attribute = 3;
+                            resolve(false);	
+                        })
+                    });					
 				},
                 /**
 				 * supprime un produit /ou supprime et ajoute un autre.( modifier la variante)
