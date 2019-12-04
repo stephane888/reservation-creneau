@@ -62,7 +62,7 @@ $fullRoot = FULLROOT_WBU;
 
     <!-- include template selection-horaire-valid.js -->
     <?php include_once $fullRoot.'/api/templates/vuejs-template.html.twig'; ?>
-    <script src="<?php echo $ROOT.'/'; ?>selection_creneau/selection-horaire.js?n=<?php echo time();?>"></script>
+    <script src="<?php echo $ROOT.'/'; ?>selection_creneau/selection-horaire-valid.js?n=<?php echo time();?>"></script>
     <script src="<?php echo $ROOT.'/'; ?>api/plugin/js-cookie/js.cookie.min.js"></script>
 	<!--  -->
 	<script src="<?php echo $ROOT.'/'; ?>selection_creneau/js/jquery.modal.min.js"></script>

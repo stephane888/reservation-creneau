@@ -53,13 +53,14 @@
                 type: {type:String, default: '',},
                 delai_traitement_en_jour: {type:[Number], default: 3},
                 plage_mn: {type:[Number], default: 120},
-                default__date_select: {type:String, default: '',},
+                maj__date_select: {type:String, default: '',},
                 default__creneau: {type:[String,Object], default: '',},//pour definir une valeur par defaut pour le creneau lors de conscrution complete.
                 creneau_update: {type:[String,Object], default: '',}, // pour mettre a jour le creneau de livraison, apres la selection sur selui de la recuperation.
                 /**
                  * Permet de reconstruire tous les options, apres MAJ du type de livraison.
                  */
-                re_construction_module: {type:[Number], default: 0},
+                re_construction_module: { type:[Number], default: 0},
+                default_date: { type:[String, Object], default: '',},
             },
             data : function () {
 				return {
@@ -94,7 +95,7 @@
                      * Decallage d'heure, permet de reserver à partir d'une heure, fonctionne sur la date en cour. 
                      * 
                      */
-                    decalage_heure: 2,
+                    decalage_heure: 4,
                     /**
                      * La periodicite entre les creneaux, (8h-00 ...) (8h-30 ...) (9h-00 ...) (9h30 ...);
                      */
@@ -118,9 +119,17 @@
                      */
                     builder_is_running: false,
                     /**
+                     * 
+                     */
+                    selection_metafields:window.selection_plage_heure,
+                    /**
+                     * Stocke les heures non utilisés.
+                     */
+                    remove_hours:{},
+                    /**
                      * for test
                      */
-                    //default__date_select2:''
+                    //maj__date_select2:''
                 }
             },
             watch: {
@@ -130,11 +139,9 @@
                  * au format YY-mm-jj ou YY-mm-jjTh:mn
                  */                
                 perfom__date_select: function(val){
-                    //console.log('Mise à jour de la date de Livraison : ', val);
                     this.update_date_livraiosn();
                 },
-                perfom__creneau: function(val){
-                    //console.log('Mise à jour du creneau de Livraison : ', val);                    
+                perfom__creneau: function(val){                    
                     this.update_creneau_livraiosn();
                 },
                 re_construction_module: function(){
@@ -145,14 +152,14 @@
             computed: {                
                 perfom__date_select: {
                     /**
-                     * La valeur de default__date_select2 est MAJ chaque fois que default__date_select est modifié.
+                     * La valeur de maj__date_select2 est MAJ chaque fois que maj__date_select est modifié.
                      * Donc, la fonction get est executé.
                      * NB : Ce systeme a besoin d'un rendu ${perfom__date_select} ou de disposer d'une methode, ou d'un watcher pour fonctionner , i.e pour suivre les modifications.
                      * elle s'execute avant mounted;
                      * Mais pour des raison d performance, il ne faut pas mettre de methode à l'interieur. (Analyse person).
                      */
                     get: function () {                      
-                        return this.default__date_select;
+                        return this.maj__date_select;
                     }                    
                 },
                 /**
@@ -166,6 +173,13 @@
                 /* */
             },
             mounted: function(){
+                /**
+                 * 
+                 */
+                if(this.selection_metafields){
+                    this.selection_metafields = JSON.parse(this.selection_metafields);
+                    this.selection_metafields = this.selection_metafields.selection_plage_heure; console.log(this.selection_metafields);
+                }
                 /**
                  * On definit la date et l'heure du jour.
                  */
@@ -232,7 +246,7 @@
                  * Permet de reconstruire entirement le module de selection.
                  * Executer par une action externe au module de selection, notament lors de la selection du type de livraison.
                  */
-                re_builder: function(){console.log(this.builder_is_running);
+                re_builder: function(){
                     var self = this;
                     /**
                      * on remet les creneaux à l'initiale
@@ -325,8 +339,8 @@
                 get_select_date: function(){
                     //console.log('get_select_date debut, type ', this.type);
                     if( this.type == 'recuperation' ){
-                        if(this.builder_is_running && this.default__date_select != '' && this.valid_default_date() > 0 ){
-                            this.date_select = new Date (this.default__date_select);
+                        if(this.builder_is_running && this.maj__date_select != '' && this.valid_default_date() > 0 ){
+                            this.date_select = new Date (this.maj__date_select);
                         }else{
                             this.date_select = this.addDays( this.current_date, (  this.date_debut_default) );
                         }                        
@@ -334,8 +348,8 @@
                         //console.log('get_select_date FIN');
                         return 'get_select_date';//this.date_select;
                     }else if( this.type == 'livraison' ) {
-                        if(this.builder_is_running && this.default__date_select != ''  && this.valid_default_date() > 0 ){
-                            this.date_select = new Date (this.default__date_select);
+                        if(this.builder_is_running && this.maj__date_select != ''  && this.valid_default_date() > 0 ){
+                            this.date_select = new Date (this.maj__date_select);
                         }else{
                             this.date_select = this.addDays( this.current_date, (  this.date_debut_default + this.delai_traitement_en_jour) );
                         }
@@ -349,8 +363,8 @@
                     date_du_jour.setHours(0);
                     date_du_jour.setMinutes(0);
                     date_du_jour.setSeconds(0);
-                    var diff = this.get_diff_day(date_du_jour, this.default__date_select, false);
-                    console.log('valid_default_date ', this.type, ' : ',diff)
+                    var diff = this.get_diff_day(date_du_jour, this.maj__date_select, false);
+                    //console.log('valid_default_date ', this.type, ' : ',diff)
                     return diff;
                 },
                 send__date_select: function(){
@@ -571,7 +585,7 @@
 					 *  - Si ensuite on definit les minutes à 15
 					 * 	on otient : 7h:15.
 					 */
-					function promisecustom ( etape=0, h, mn){
+					function promisecustom( etape=0, h, mn){
 
 						return new Promise( (resolve, reject) => {
 							//console.log('promisecustom : ', etape, h, ' semi : ', semi, 'type : ', self.type, ' Creneau : ',plage_mn, 'mn_debut : ',mn_debut);
@@ -581,7 +595,7 @@
                             var status=true;
 							//var crt_fin =  plage_mn;
                             //var semi_time = self.periodicite;
-                            //var remove_hour = false;
+                            var remove_hour = false;
                             
                             /**
                              * block 1 
@@ -590,6 +604,9 @@
                             current_date.setMinutes( mn );
                             c_hr = current_date.getHours();	
                             c_mn = current_date.getMinutes();
+                            if( self.remove_hours && self.remove_hours[c_hr+'-'+c_mn] ){
+                                remove_hour = true;
+                            }
                             if(c_hr<10){
 									c_hr = '0'+c_hr;
 							}
@@ -597,6 +614,7 @@
 									c_mn = '0'+c_mn;
 							}
                             ct_bl.h1 = c_hr+':'+c_mn;
+                            
                             /**
                              * block 2 
                              */
@@ -620,14 +638,15 @@
                                 status=false;
                             }                            
                             if(status){
-                                addCrenaux(ct_bl);
+                                if(!remove_hour){
+                                    addCrenaux(ct_bl);
+                                }                                
                                 resolve( { etape:etape, 'mn': mn} );
                             }else{
                                 reject( { etape:etape, 'mn': mn} );
                             }
                             
-
-                                function addCrenaux(ct_bl){ 
+                            function addCrenaux(ct_bl){ 
                                     /**
                                      * On selectionne la valeur valeur par defaut ( à verfier et noter)
                                      */
@@ -637,8 +656,8 @@
                                         }
                                     }      
                                     self.horaires.push( ct_bl );
-                                }                                 
-						} );
+                            } 
+						});
 					}
 					
 					 function successCallback(value){
@@ -692,14 +711,16 @@
                     });
                 },
                 creneau_parjour: function(index){
+                    var self=this;
+                    self.remove_hours = {};
                     var plages = [
-						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:12, mn_fin:30 }, soir:{ht_debut:18, mn_debut:0, ht_fin:22, mn_fin:30 }}, //dim
-						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:13, mn_debut:0, ht_fin:21, mn_fin:30 }}, //lin
-						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:13, mn_debut:0, ht_fin:21, mn_fin:30 }}, //mard
-						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:13, mn_debut:0, ht_fin:22, mn_fin:0 } }, //merc
-						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:16, mn_debut:30, ht_fin:21, mn_fin:30 }}, //jeudi
-						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:16, mn_debut:30, ht_fin:21, mn_fin:30 }}, //vendredi
-						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:14, mn_fin:30 }, soir:{ht_debut:18, mn_debut:0, ht_fin:21, mn_fin:30 }}  //samedi    			
+						{}, //dim
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:21, mn_fin:30 }}, //lin
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:21, mn_fin:30 }}, //mard
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:21, mn_fin:30 }}, //merc
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:21, mn_fin:30 }}, //jeudi
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:21, mn_fin:30 }}, //vendredi
+						{matinee:{ ht_debut:8, mn_debut:0, ht_fin:21, mn_fin:30 }}  //samedi    			
                     ];
                     var plage_valide={};
                     /**
@@ -720,7 +741,7 @@
                         (this.type=='livraison' && this.diff_day == (this.delai_traitement_en_jour + this.date_debut_default) )
                     )
                     {
-                        var hour_now = this.current_date.getHours(), hour_final=0;
+                        var hour_now = this.current_date.getHours(), hour_final=0; 
                         if( plage_valide.matinee && ( plage_valide.matinee.ht_fin >= (hour_now + Math.round(this.plage_mn/60) + this.decalage_heure) ) ){
                             // + decallage
                             hour_final = hour_now + this.decalage_heure;
@@ -745,7 +766,7 @@
                      * MAJ des creneaux en fonction de celui precedament selectionnée.
                      */
                     if(this.type == 'livraison' && !this.update_builder_is_running){
-                        //console.log('%c GET new creneau %s','background: #222; color: #bada55',this.type,'  \n\n Date de recuparation : ', this.perfom__date_select , ' \n\n Date de livraison : ', this.date_select, ' \n\n Date encours ou date du jour : ',this.current_date);
+                        //console.log('%c GET new creneau %s','background: #222; color: #bada55',this.type,'  \n\n Date de recuparation : ', this.perfom__date_select , '\n\n Date from recuperation : ',this.default_date, ' \n\n Date de livraison : ', this.date_select, ' \n\n Date encours ou date du jour : ',this.current_date );
                         var date_livraison = this.date_select;
                         date_livraison.setHours(0);
                         date_livraison.setMinutes(0);
@@ -758,7 +779,10 @@
                         date_from_recuperation.setHours(0);
                         date_from_recuperation.setMinutes(0);
                         date_from_recuperation.setSeconds(0);
-                        if(this.perfom__date_select){
+                        if(this.default_date){
+                            date_from_recuperation = this.default_date;
+                        }
+                        else if(this.perfom__date_select){
                             date_from_recuperation = this.perfom__date_select;
                         }
                         
@@ -798,6 +822,54 @@
                             }
                         }
                     }
+
+                    /**
+					 * Si la date encours de selection est egale à celle dans le metafield, 
+					 * on enleve la plage.
+                     * 
+                     * Pour y parvenir on met dans une variable les heures à supprimer.
+					 */    		
+					var current_date_select = this.date_select;					
+					//console.log('self.selection_metafields', self.selection_metafields);					
+                    if( self.selection_metafields && self.selection_metafields.livraison && self.type == 'livraison'){
+                        $.each( self.selection_metafields.livraison, function(i, k){
+                            if(!k.mn_debut){
+                                k.mn_debut = 0;
+                            }
+                            if(current_date_select && (k.date == current_date_select.getDate()+'/'+(current_date_select.getMonth()+1)+'/'+current_date_select.getFullYear() )){
+                                if(plage_valide.matinee && (k.ht_debut < plage_valide.matinee.ht_fin ) ){
+                                    //plage_valide.matinee.ht_debut = k.ht_debut;
+                                    //plage_valide.matinee.ht_fin = parseInt(k.ht_debut) + 2;
+                                    self.remove_hours[ k.ht_debut+'-'+k.mn_debut ] = { hr:k.ht_debut, mn:k.mn_debut };
+                                } 
+                                else if(plage_valide.soir){
+                                    //plage_valide.matinee.ht_debut = k.ht_debut;
+                                    //plage_valide.matinee.ht_fin = parseInt(k.ht_debut) + 2;
+                                    self.remove_hours[ k.ht_debut+'-'+k.mn_debut ] = { hr:k.ht_debut, mn:k.mn_debut };
+                                }
+                            }
+                        });
+                    }
+                    if( self.selection_metafields && self.selection_metafields.recuperation && self.type == 'recuperation'){
+                        $.each( self.selection_metafields.recuperation, function(i, k){
+                            if(!k.mn_debut){
+                                k.mn_debut = 0;
+                            }
+                            if(current_date_select && (k.date == current_date_select.getDate()+'/'+(current_date_select.getMonth()+1)+'/'+current_date_select.getFullYear()  ) ){
+                                if(plage_valide.matinee && (k.ht_debut < plage_valide.matinee.ht_fin ) ){
+                                   // plage_valide.matinee.ht_debut = k.ht_debut;
+                                    //plage_valide.matinee.ht_fin = parseInt(k.ht_debut) + 2;
+                                    self.remove_hours[ k.ht_debut+'-'+k.mn_debut ] = { hr:k.ht_debut, mn:k.mn_debut };
+                                } 
+                                else if(plage_valide.soir){
+                                    //plage_valide.matinee.ht_debut = k.ht_debut;
+                                    //plage_valide.matinee.ht_fin = parseInt(k.ht_debut) + 2;
+                                    self.remove_hours[ k.ht_debut+'-'+k.mn_debut ] = { hr:k.ht_debut, mn:k.mn_debut };
+                                }
+                            }
+                        });
+                    }
+                    //console.log( 'self.remove_hours : ', self.remove_hours );
                     //console.log(' plage_valide : ', plage_valide);
                     return plage_valide;
                 },
@@ -868,8 +940,6 @@
                                     status=false;
 							    }
                             }
-                               				
-							
 							newDays.push({
 								status:status,
 								date_french:date.getDate().toString().padStart(2, '0'),
@@ -963,7 +1033,7 @@
                     self.horaires = horaires;
                     return 'select_plage_heure';
                 },
-                send__creneau: function(creneau){
+                send__creneau: function(creneau){ 
                     this.$emit('ev_date_et_creneau_to_save', {type:this.type, date:this.date_select,creneau:creneau});
                     //if(!this.builder_is_running)
                     {
@@ -1058,9 +1128,10 @@
                  */
                 date_recuperation: '', 
                 default_creneau_recuperation: '',
-                date_livraison:'',
-                default_creneau_livraison:'',
-                creneau_update_livraison:'',
+                date_livraison: '',
+                default_creneau_livraison: '',
+                creneau_update_livraison: '',
+                date_from_recuperation: '',
                 /**
                  * Plage d'un creneau.
                  */
@@ -1146,8 +1217,9 @@
                  */
                 this.loadcart();     
                 /*
-                this.date_recuperation = '2019-12-12';
-                this.date_livraison = '2019-12-19';
+                this.date_recuperation = '2019-12-13';
+                this.date_livraison = '2019-12-16';
+                this.date_from_recuperation = this.date_recuperation;
                 this.re_construction_module++;
                 /**/
             },
@@ -1197,7 +1269,7 @@
                     }
                 },
                 change_type_livraison: function(datas){
-                    console.log('change_type_livraison : ', datas);                    
+                    //console.log('change_type_livraison : ', datas);                    
                     /**
 					 * met à jour les produits du panier.
 					 */
@@ -1215,7 +1287,8 @@
                     this.re_construction_module++;
                 },
                 reload_livraison__date: function(day){
-                    //console.log('Mise à jour de la date de livraison, action déclenchée  par celui de la recuperation. : ', day);
+                    console.log('Mise à jour de la date de livraison, action déclenchée  par celui de la recuperation. : ', day);
+                    this.date_from_recuperation = null;
                     this.date_livraison = day.year+'-'+(day.month + 1)+'-'+day.date;
                 },
                 reload_livraison__creneau: function(creneau){
@@ -1290,7 +1363,7 @@
                         }
                         this.url = '/cart/update';
                         var saveAttribute = await this.save_attribute_cart( datas );
-                        console.log('Procced_checkout saveAttribute : ', saveAttribute, ' localisation : ', self.valid_localisation);
+                        //console.log('Procced_checkout saveAttribute : ', saveAttribute, ' localisation : ', self.valid_localisation);
                         if( self.valid_localisation && saveAttribute ){
                             await this.apply_checkout();
                         }
@@ -1309,7 +1382,7 @@
 						 */
 						var getAttributes = function (){
                             return new Promise(resolve => {
-                                console.log('getAttributes debut');
+                                //console.log('getAttributes debut');
                                 var texte = [];
                                 if(self.cart.attributes && self.cart.attributes.livraison && self.cart.attributes.recuperation ){
                                     var livraison = self.cart.attributes.livraison.split('\r\n');
@@ -1332,14 +1405,15 @@
                                             //console.log(texte[1]);
                                             var date = texte[1].split('/');
                                             self.date_livraison = date[2]+'-'+date[1]+'-'+date[0];
+                                            self.date_from_recuperation = self.date_recuperation;
                                         }
                                         if( texte[0] && (texte[0].indexOf('Heure') !== -1) && texte[1] ){
                                             //console.log(texte[1]);
                                             self.default_creneau_livraison = texte[1];
                                         } 
                                     });
-                                    console.log('Date recuperation from cart : ', self.date_recuperation, '\n\n Creneau from cart : ', self.default_creneau_recuperation);
-                                    console.log('livraison :', livraison);
+                                    //console.log('Date recuperation from cart : ', self.date_recuperation, '\n\n Creneau from cart : ', self.default_creneau_recuperation);
+                                    //console.log('livraison :', livraison);
                                     /**
                                      * Reconstruction des modules de selection.
                                      * (on reconstruit une seule fois)
@@ -1368,7 +1442,7 @@
 						 */
 						var CheckTypeLivraison = function (){
                             return new Promise(resolve => {
-                                console.log('CheckTypeLivraison debut');
+                                //console.log('CheckTypeLivraison debut');
                                 $.each(self.cart.items, function(i, product){
                                     if(self.variants[product.id]){
                                         check_type_livraison=true;
@@ -1421,11 +1495,11 @@
                         }
 
                         var execution = async function() {
-                            console.log('==Début analyse des données dans le panier == \n\n');
+                            //console.log('==Début analyse des données dans le panier == \n\n');
                             var etape1 = await CheckTypeLivraison();
-                            console.log('fin de etape : ', etape1, ' \n\n ');
+                            //console.log('fin de etape : ', etape1, ' \n\n ');
                             var etape2 = await getAttributes();
-                            console.log('fin de etape : ', etape2, ' \n\n ');
+                            //console.log('fin de etape : ', etape2, ' \n\n ');
                             /**
                              * Si le type de livraison existe on reconstruit les modules.
                              */
@@ -1433,14 +1507,14 @@
                                 self.re_construction_module++;
                             }
                             var etape3 = await addDefultTypeLivraison();
-                            console.log('fin de etape : ', etape3, ' \n\n ');
+                            //console.log('fin de etape : ', etape3, ' \n\n ');
                             var etape4 = await checkAdress();
-                            console.log('fin de etape : ', etape4, ' \n\n ');
+                            //console.log('fin de etape : ', etape4, ' \n\n ');
                         }
                         execution();
 					}
 				},                
-                open_map: function(){console.log('MAP open');
+                open_map: function(){
                         var self=this;
 						$('#trigger-simple-map2'+self.model_ref).trigger( 'click' );  
                 },
