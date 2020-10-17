@@ -14,4 +14,9 @@ Il affiche 3 blocs au total :
 
 Ce script utilise Vue.Js et bootstrap 4.
 
+<http://example.com/>
+
+
+![Alt text](/path/to/img.jpg "Optional title")
+
 

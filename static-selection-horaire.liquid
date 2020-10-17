@@ -1,9 +1,9 @@
-<!-- static-map-creneau.liquid -->
+<!-- static-selection-horaire.liquid -->
 <!-- selection -->
 <div id="selection_horaire" >
     <section  class="map-localisation-wbu container" v-show="show_selection" >
       <div class="row">
-        <strong class="text-alert-danger element-visible" style="display:none;"> Jour desactiver :Jeudi et dimanche </strong>
+        <strong class="text-alert-danger element-visible" style="display:none;"> Afin d'afficher correctement les créneaux, merci de cliquer sur la date concernée </strong>
         <div class="col-sm-8">
             <div >
                 <selection_horaire
@@ -59,35 +59,13 @@
 </div>
 <script>
     if(window.location.host == 'modulejs.kksa'){
-      alert('');
         //window.wbu_date_now = new Date('2019-12-01T03:00'); ////'{{"now" | date: "%Y-%m-%dT%H:%M"}}';
-         window.wbu_date_now = new Date('2020-05-09T09:48');
-        // window.wbu_date_now = new Date();
+        //window.wbu_date_now = new Date('2019-12-02T08:00');
+        window.wbu_date_now = new Date();
         window.selection_plage_heure = '{"selection_plage_heure":{"livraison":{"24":{"date":"10/12/2019","ht_debut":7,"mn_debut":30},"25":{"date":"10/12/2019","ht_debut":8,"mn_debut":0},"26":{"date":"28/11/2019","ht_debut":7,"mn_debut":30},"27":{"date":"30/11/2019","ht_debut":8,"mn_debut":0},"28":{"date":"30/11/2019","ht_debut":14,"mn_debut":0},"29":{"date":"2/12/2019","ht_debut":18,"mn_debut":0},"30":{"date":"2/12/2019","ht_debut":18,"mn_debut":30}},"recuperation":{"21":{"date":"9/12/2019","ht_debut":7,"mn_debut":30},"22":{"date":"9/12/2019","ht_debut":8,"mn_debut":0},"26":{"date":"28/11/2019","ht_debut":18,"mn_debut":0},"28":{"date":"28/11/2019","ht_debut":17,"mn_debut":0}}}}';////'{{ wbu_metafield.wbu | json }}';
     }else{
         window.wbu_date_now = '{{"now" | date: "%Y-%m-%dT%H:%M"}}';
     }
-</script>
-<script>
-window.wbu_lundi = '7:30|21:30';
-window.wbu_mardi = '7:30|21:30';
-window.wbu_mercredi = '7:30|21:30';
-window.wbu_jeudi = '7:30|21:30';
-window.wbu_vendredi = '7:30|21:30';
-window.wbu_samedi = '7:30|21:30';
-window.wbu_dimanche = '7:30|21:30';
-// Jours désactiver
-window.wbu_lundi_disable = false;
-window.wbu_mardi_disable = false;
-window.wbu_mercredi_disable = false;
-window.wbu_jeudi_disable = false;
-window.wbu_vendredi_disable = false;
-window.wbu_samedi_disable = true;
-window.wbu_dimanche_disable = true;
-// delai de livraison
- window.wbu_free_delai = 3;
- window.wbu_plus_delai = 2;
- window.wbu_express_delai = 1;
 </script>
 <!-- templates -->
 
@@ -99,7 +77,7 @@ window.wbu_dimanche_disable = true;
 	</div>
 	<div class="content-body">
 		<!-- selection du jour -->
-    <ul class="tabs">
+		<ul class="tabs">
 			<li v-for="(tab, index) in dates_tabs"
 				@click="select_date_tab(tab.index)"
 				:class="[(tab.active)? 'active':'']"><strong class="d-block"
@@ -108,7 +86,7 @@ window.wbu_dimanche_disable = true;
 		</ul>
 		<section v-show="!show_texte_error">
 			<!-- plage d'heure -->
-      <div v-show="plage_heure">
+			<div v-show="plage_heure">
 				<ul class="list-dates">
 					<li v-for="(hour, index) in horaires"><span class="plage-heure"
 						:class="[(hour.active == true)? 'active':'']"
@@ -172,14 +150,168 @@ window.wbu_dimanche_disable = true;
         </div>
     </div>
 </template>
-
+<script>
+  window.wbu_lundi = '{{ section.settings.lundi_debut }}|{{ section.settings.lundi_fin }}';
+  window.wbu_mardi = '{{ section.settings.mardi_debut }}|{{ section.settings.mardi_fin }}';
+  window.wbu_mercredi = '{{ section.settings.mercredi_debut }}|{{ section.settings.mercredi_fin }}';
+  window.wbu_jeudi = '{{ section.settings.jeudi_debut }}|{{ section.settings.jeudi_fin }}';
+  window.wbu_vendredi = '{{ section.settings.vendredi_debut }}|{{ section.settings.vendredi_fin }}';
+  window.wbu_samedi = '{{ section.settings.samedi_debut }}|{{ section.settings.samedi_fin }}';
+  window.wbu_dimanche = '{{ section.settings.dimanche_debut }}|{{ section.settings.dimanche_fin }}';
+  // Jours désactiver
+  window.wbu_lundi_disable = '{{ section.settings.lundi_disable }}';
+  window.wbu_mardi_disable = '{{ section.settings.mardi_disable }}';
+  window.wbu_mercredi_disable = '{{ section.settings.mercredi_disable }}';
+  window.wbu_jeudi_disable = '{{ section.settings.jeudi_disable }}';
+  window.wbu_vendredi_disable = '{{ section.settings.vendredi_disable }}';
+  window.wbu_samedi_disable = '{{ section.settings.samedi_disable }}';
+  window.wbu_dimanche_disable = '{{ section.settings.dimanche_disable }}';
+</script>
 
 
 
 {% schema %}
   {
-    "name": "Section name",
-    "settings": []
+    "name": "Configuration creneaux",
+
+    "settings": [
+    {
+      "type": "header",
+      "content": "Configuration des plages de Début et Fin"
+    },
+	  {
+        "id": "lundi_debut",
+        "type": "text",
+        "label": "Lundi heure d'ouverture",
+        "default": "7:30"
+      },
+	  {
+        "id": "lundi_fin",
+        "type": "text",
+        "label": "Lundi heure fermeture",
+        "default": "21:30"
+      },
+	  {
+        "id": "mardi_debut",
+        "type": "text",
+        "label": "Mardi heure d'ouverture",
+        "default": "7:30"
+      },
+	  {
+        "id": "mardi_fin",
+        "type": "text",
+        "label": "Mardi heure fermeture",
+        "default": "21:30"
+      },
+	  {
+        "id": "mercredi_debut",
+        "type": "text",
+        "label": "Mercredi heure d'ouverture",
+        "default": "7:30"
+      },
+	  {
+        "id": "mercredi_fin",
+        "type": "text",
+        "label": "Mercredi heure fermeture",
+        "default": "21:30"
+      },
+	  {
+        "id": "jeudi_debut",
+        "type": "text",
+        "label": "Jeudi heure d'ouverture",
+        "default": "7:30"
+      },
+	  {
+        "id": "jeudi_fin",
+        "type": "text",
+        "label": "Jeudi heure fermeture",
+        "default": "21:30"
+      },
+	  {
+        "id": "vendredi_debut",
+        "type": "text",
+        "label": "Vendredi heure d'ouverture",
+        "default": "7:30"
+      },
+	  {
+        "id": "vendredi_fin",
+        "type": "text",
+        "label": "Vendredi heure fermeture",
+        "default": "21:30"
+      },
+	  {
+        "id": "samedi_debut",
+        "type": "text",
+        "label": "Samedi heure d'ouverture",
+        "default": "7:30"
+      },
+	  {
+        "id": "samedi_fin",
+        "type": "text",
+        "label": "Samedi heure fermeture",
+        "default": "21:30"
+      },
+
+	  {
+        "id": "dimanche_debut",
+        "type": "text",
+        "label": "Samedi heure d'ouverture",
+        "default": "7:30"
+      },
+	  {
+        "id": "dimanche_fin",
+        "type": "text",
+        "label": "Samedi heure fermeture",
+        "default": "21:30"
+      },
+      {
+        "type": "header",
+        "content": "Selectionner les jours non ouvrables"
+      },
+      {
+         "type":      "checkbox",
+         "id":        "lundi_disable",
+         "label":     "Lundi",
+         "default":   false
+      },
+      {
+         "type":      "checkbox",
+         "id":        "mardi_disable",
+         "label":     "Mardi",
+         "default":   false
+      },
+      {
+         "type":      "checkbox",
+         "id":        "mercredi_disable",
+         "label":     "Mercredi",
+         "default":   false
+      },
+      {
+         "type":      "checkbox",
+         "id":        "jeudi_disable",
+         "label":     "Jeudi",
+         "default":   false
+      },
+      {
+         "type":      "checkbox",
+         "id":        "vendredi_disable",
+         "label":     "Vendredi",
+         "default":   false
+      },
+      {
+         "type":      "checkbox",
+         "id":        "samedi_disable",
+         "label":     "Samedi",
+         "default":   false
+      },
+      {
+         "type":      "checkbox",
+         "id":        "dimanche_disable",
+         "label":     "Dimanche",
+         "default":   false
+      }
+
+    ]
   }
 {% endschema %}
 
